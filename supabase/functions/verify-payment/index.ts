@@ -31,10 +31,22 @@ Deno.serve(async (req) => {
       return json({ verified: false, error: "Server not configured" }, 500);
     }
 
-    const res = await fetch(
-      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
-    );
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 15_000);
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+        {
+          headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+          signal: ctl.signal,
+        }
+      );
+    } catch (e) {
+      return json({ verified: false, error: "Paystack timeout: " + String(e) }, 504);
+    } finally {
+      clearTimeout(t);
+    }
     if (!res.ok) return json({ verified: false }, 200);
 
     const body = await res.json();

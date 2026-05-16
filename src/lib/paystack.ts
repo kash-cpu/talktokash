@@ -63,21 +63,34 @@ export function payWithPaystack(opts: {
  */
 export async function verifyPaystackReference(reference: string): Promise<boolean> {
   const url = import.meta.env.VITE_SUPABASE_URL;
-  if (!url || !reference) return false;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon || !reference) return false;
+
+  // Abort if the function takes longer than 20s so the UI never hangs.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20_000);
+
   try {
     const res = await fetch(`${url}/functions/v1/verify-payment`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
       },
       body: JSON.stringify({ reference }),
+      signal: ctl.signal,
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      console.warn("[paystack] verify HTTP error", res.status);
+      return false;
+    }
     const json = (await res.json()) as { verified: boolean };
     return Boolean(json.verified);
   } catch (e) {
     console.warn("[paystack] verify call failed", e);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }

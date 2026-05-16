@@ -15,12 +15,16 @@ create table if not exists public.bookings (
   status text not null default 'pending_payment'
     check (status in ('pending_payment','awaiting_verification','confirmed','cancelled')),
   payment_ref text,
-  meet_link text,
-  unique (start_at)  -- prevents double-booking the exact same slot
+  meet_link text
 );
 
 create index if not exists bookings_start_at_idx on public.bookings (start_at);
 create index if not exists bookings_status_idx   on public.bookings (status);
+
+-- Only an ACTIVE booking blocks a slot. Abandoned `pending_payment` rows do not.
+create unique index if not exists bookings_active_start_at_uidx
+  on public.bookings (start_at)
+  where status in ('awaiting_verification','confirmed');
 
 -- Row-Level Security:
 -- We allow anonymous INSERTs and limited SELECTs (only fields needed to compute busy slots).
