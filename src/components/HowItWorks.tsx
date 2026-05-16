@@ -2,7 +2,7 @@ const STEPS = [
   { n: "01", title: "Pick your topic", text: "Relationship, marriage, personal growth, or mood. Pick what fits.", time: "~30 sec" },
   { n: "02", title: "Audio or Video", text: "Voice-only for ₦40,000. Video on Google Meet for ₦50,000.", time: "~30 sec" },
   { n: "03", title: "Pick a time", text: "See free slots between 10:00 and 22:00 WAT. Tap one.", time: "~1 min" },
-  { n: "04", title: "Pay & confirm", text: "Card, transfer, USSD or direct bank. Verified payment locks your slot.", time: "~2 min" },
+  { n: "04", title: "Pay & confirm", text: "Card, bank transfer or USSD via Paystack. Your slot locks the moment payment clears.", time: "~2 min" },
 ];
 
 export default function HowItWorks() {

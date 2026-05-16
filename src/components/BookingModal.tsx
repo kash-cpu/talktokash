@@ -30,7 +30,6 @@ export default function BookingModal({ open, onClose }: Props) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
@@ -52,7 +51,7 @@ export default function BookingModal({ open, onClose }: Props) {
       case "category": return !!category;
       case "type": return !!sessionType;
       case "datetime": return !!when;
-      case "contact": return name.trim().length > 1 && (validEmail(email) || validPhone(phone));
+      case "contact": return name.trim().length > 1 && validEmail(email);
       case "review": return agreed;
       default: return false;
     }
@@ -101,13 +100,15 @@ export default function BookingModal({ open, onClose }: Props) {
         metadata: { booking_id: booking.id, category, sessionType },
       });
       if (result.status === "closed") { setSubmitting(false); return; }
-      let updated = await updateBooking(booking.id!, { payment_ref: result.reference, status: "awaiting_verification" });
+      let updated = await updateBooking(booking.id!, { payment_ref: result.reference });
       setBooking(updated);
       setVerifying(true);
       const ok = await verifyPaystackReference(result.reference);
       if (ok) {
         updated = await updateBooking(booking.id!, { status: "confirmed" });
         setBooking(updated);
+      } else {
+        setError("Payment received but verification is still processing. You'll get a confirmation email shortly.");
       }
       setStep("done");
     } catch (e) {
@@ -115,22 +116,6 @@ export default function BookingModal({ open, onClose }: Props) {
     } finally {
       setSubmitting(false); setVerifying(false);
     }
-  }
-
-  async function handleMarkTransferDone() {
-    if (!booking) return;
-    setSubmitting(true);
-    try {
-      const updated = await updateBooking(booking.id!, { status: "awaiting_verification" });
-      setBooking(updated);
-      setStep("done");
-    } finally { setSubmitting(false); }
-  }
-
-  function copyAccount() {
-    navigator.clipboard.writeText(`${BRAND.bankAccount.bank} · ${BRAND.bankAccount.number} · ${BRAND.bankAccount.name}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
   }
 
   if (!open) return null;
@@ -168,8 +153,8 @@ export default function BookingModal({ open, onClose }: Props) {
             <ReviewStep category={category!} sessionType={sessionType!} when={when!} name={name} email={email} phone={phone} price={price} agreed={agreed} onAgreed={setAgreed} />
           )}
           {step === "payment" && booking && (
-            <PaymentStep booking={booking} price={price} copied={copied} copyAccount={copyAccount}
-              onPayOnline={handlePayOnline} onMarkTransfer={handleMarkTransferDone}
+            <PaymentStep booking={booking} price={price}
+              onPayOnline={handlePayOnline}
               verifying={verifying} submitting={submitting} />
           )}
           {step === "done" && booking && (
@@ -295,7 +280,7 @@ function ContactStep({
         </div>
       </div>
       <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
-        Provide at least one. Used for your Meet link &amp; reminder.
+        Email is required for your receipt &amp; Meet link. Phone optional for reminders.
       </p>
     </div>
   );
@@ -338,10 +323,10 @@ function ReviewStep({
 }
 
 function PaymentStep({
-  booking, price, copied, copyAccount, onPayOnline, onMarkTransfer, verifying, submitting,
+  booking, price, onPayOnline, verifying, submitting,
 }: {
-  booking: Booking; price: number; copied: boolean; copyAccount: () => void;
-  onPayOnline: () => void; onMarkTransfer: () => void; verifying: boolean; submitting: boolean;
+  booking: Booking; price: number;
+  onPayOnline: () => void; verifying: boolean; submitting: boolean;
 }) {
   return (
     <div className="space-y-8">
@@ -354,43 +339,14 @@ function PaymentStep({
       </div>
 
       <div className="border border-white/20 p-6 md:p-10">
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/40 mb-2">Option A</div>
-            <h3 className="font-sans font-bold text-xl md:text-2xl">Pay with card / transfer / USSD</h3>
-            <p className="mt-2 text-sm text-white/60 max-w-md">
-              Auto-verified by Paystack the moment payment clears. Your slot locks instantly.
-            </p>
-          </div>
-          <span className="tag text-accent border-accent shrink-0">Recommended</span>
-        </div>
-        <button className="btn-primary btn-block" onClick={onPayOnline} disabled={submitting}>
+        <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/40 mb-2">Secure checkout</div>
+        <h3 className="font-sans font-bold text-xl md:text-2xl">Pay with card, transfer or USSD</h3>
+        <p className="mt-2 text-sm text-white/60 max-w-md">
+          Powered by Paystack. Your slot locks the moment payment clears.
+        </p>
+        <button className="btn-primary btn-block mt-6" onClick={onPayOnline} disabled={submitting}>
           {submitting ? "Processing..." : verifying ? "Verifying..." : `Pay ${formatNaira(price)} →`}
         </button>
-      </div>
-
-      <div className="border border-white/20 p-6 md:p-10">
-        <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/40 mb-2">Option B</div>
-        <h3 className="font-sans font-bold text-xl md:text-2xl">Bank transfer</h3>
-        <p className="mt-2 text-sm text-white/60">
-          Send <span className="text-white">{formatNaira(price)}</span> to the account below. Use your booking ID as narration.
-        </p>
-
-        <div className="mt-6 border border-white/30 divide-y divide-white/15 font-mono text-sm">
-          <KV k="Bank" v={BRAND.bankAccount.bank} />
-          <KV k="Account No." v={BRAND.bankAccount.number} />
-          <KV k="Account Name" v={BRAND.bankAccount.name} />
-          <KV k="Narration" v={booking.id?.slice(0, 8) ?? ""} />
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button className="btn-ghost btn-block" onClick={copyAccount}>
-            {copied ? "Copied ✓" : "Copy details"}
-          </button>
-          <button className="btn-primary btn-block" onClick={onMarkTransfer} disabled={submitting}>
-            {submitting ? "..." : "I've paid →"}
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -418,8 +374,8 @@ function DoneStep({
       </h3>
       <p className="mt-6 text-white/65 max-w-lg text-sm md:text-base leading-relaxed">
         {confirmed
-          ? `${humanDate(when.date)} at ${when.slot.label}. A Google Meet link will be sent to ${booking.contact_email ?? booking.contact_phone}.`
-          : `We're verifying your payment. Once confirmed, you'll get a Meet link by ${booking.contact_email ? "email" : "WhatsApp"}. Don't miss your session, no refunds.`}
+          ? `${humanDate(when.date)} at ${when.slot.label}. A Google Meet link will be sent to ${booking.contact_email}.`
+          : `We're verifying your payment. Once confirmed, you'll get a Meet link by email. Don't miss your session, no refunds.`}
       </p>
 
       <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg">
@@ -442,14 +398,4 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
     </div>
   );
 }
-function KV({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-center justify-between px-4 md:px-6 py-4">
-      <span className="text-white/50 uppercase tracking-[0.18em] text-[11px]">{k}</span>
-      <span className="text-white">{v}</span>
-    </div>
-  );
-}
-
 function validEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
-function validPhone(v: string) { return /^[\d+\-\s()]{7,}$/.test(v.trim()); }

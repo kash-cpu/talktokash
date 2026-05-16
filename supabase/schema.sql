@@ -13,7 +13,7 @@ create table if not exists public.bookings (
   contact_email text,
   contact_phone text,
   status text not null default 'pending_payment'
-    check (status in ('pending_payment','awaiting_verification','confirmed','cancelled')),
+    check (status in ('pending_payment','confirmed','cancelled')),
   payment_ref text,
   meet_link text
 );
@@ -24,7 +24,7 @@ create index if not exists bookings_status_idx   on public.bookings (status);
 -- Only an ACTIVE booking blocks a slot. Abandoned `pending_payment` rows do not.
 create unique index if not exists bookings_active_start_at_uidx
   on public.bookings (start_at)
-  where status in ('awaiting_verification','confirmed');
+  where status = 'confirmed';
 
 -- Row-Level Security:
 -- We allow anonymous INSERTs and limited SELECTs (only fields needed to compute busy slots).
@@ -48,11 +48,11 @@ create policy "anon can insert bookings"
 create policy "anon can read busy slots"
   on public.bookings for select
   to anon
-  using (status in ('awaiting_verification','confirmed'));
+  using (status = 'confirmed');
 
--- Allow attaching payment reference + flipping status to awaiting_verification.
+-- Allow attaching payment reference (status stays pending_payment until edge function flips it).
 create policy "anon can update own ref"
   on public.bookings for update
   to anon
   using (status = 'pending_payment')
-  with check (status in ('pending_payment','awaiting_verification'));
+  with check (status = 'pending_payment');

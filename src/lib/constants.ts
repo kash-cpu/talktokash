@@ -3,11 +3,6 @@ export const BRAND = {
   host: "Kash",
   fullName: "Abdulazeez Kasheem",
   email: "talktokash.now@gmail.com",
-  bankAccount: {
-    bank: "GTBANK",
-    number: "0175550888",
-    name: "Abdulazeez Kasheem",
-  },
 };
 
 export const SESSION_MINUTES = 30;

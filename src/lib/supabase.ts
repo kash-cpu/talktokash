@@ -15,7 +15,6 @@ export const supabase: SupabaseClient | null = supabaseEnabled
  */
 export type BookingStatus =
   | "pending_payment"
-  | "awaiting_verification"
   | "confirmed"
   | "cancelled";
 

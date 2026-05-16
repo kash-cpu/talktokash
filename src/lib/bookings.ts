@@ -32,7 +32,7 @@ export async function getBusySlots(rangeDays = 60): Promise<string[]> {
       .select("start_at,status")
       .gte("start_at", from)
       .lte("start_at", to)
-      .in("status", ["awaiting_verification", "confirmed"]);
+      .in("status", ["confirmed"]);
     if (error) {
       console.warn("[supabase] busy fetch failed, falling back to local", error);
     } else if (data) {
@@ -40,7 +40,7 @@ export async function getBusySlots(rangeDays = 60): Promise<string[]> {
     }
   }
   return readLocal()
-    .filter((b) => b.status === "awaiting_verification" || b.status === "confirmed")
+    .filter((b) => b.status === "confirmed")
     .map((b) => new Date(b.start_at).toISOString());
 }
 

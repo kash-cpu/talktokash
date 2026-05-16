@@ -6,7 +6,7 @@ const FAQS = [
   { q: "Are refunds available?", a: "No. Once a session is booked and paid for, it cannot be refunded, including if you miss the call. Please choose a time you can keep." },
   { q: "How does the video session happen?", a: "Once payment is confirmed, you receive a Google Meet link by email and/or WhatsApp. Click it at the booked time and you're in." },
   { q: "What if I just need career or talent guidance?", a: "Pick the Personal Growth topic. Kash has helped many talented people figure out their next move, untangle a stuck career, or pick between options." },
-  { q: "How do I know payment is secure?", a: "Card and bank payments are processed by Paystack and verified server-side before your slot is locked. Direct transfers are confirmed manually." },
+  { q: "How do I know payment is secure?", a: "All payments are processed by Paystack and verified server-side before your slot is locked. Your card details never touch our servers." },
 ];
 
 export default function FAQ() {
